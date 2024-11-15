@@ -51,3 +51,4 @@ log/
 config/openvpn/ca.crt
 config/openvpn/client.crt
 config/openvpn/client.key 
+virtualenv/
