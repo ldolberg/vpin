@@ -29,6 +29,78 @@ This project turns a Raspberry Pi 4 into a WiFi access point that routes all tra
 - IP Range: 192.168.4.0/24
 - DHCP Range: 192.168.4.2 - 192.168.4.20
 
+## Requirements
+
+- Raspberry Pi 4 (recommended) or Raspberry Pi 3
+- Raspbian/Raspberry Pi OS (Debian Bullseye or newer)
+- Compatible WiFi adapter (built-in WiFi works)
+- Active internet connection
+- VPN subscription with OpenVPN configuration files
+
 ## Troubleshooting
 
-Check service status: 
+Check service status:
+```bash
+# Check VPN connection
+systemctl status openvpn@client
+
+# Check WiFi access point
+systemctl status hostapd
+
+# Check DHCP server
+systemctl status dnsmasq
+
+# Check IP forwarding
+cat /proc/sys/net/ipv4/ip_forward
+
+# View iptables rules
+sudo iptables -L -n -v
+sudo iptables -t nat -L -n -v
+```
+
+Common issues:
+
+1. **No WiFi network visible**
+   - Check hostapd status: `systemctl status hostapd`
+   - Verify WiFi interface: `iwconfig`
+   - Check hostapd configuration: `cat /etc/hostapd/hostapd.conf`
+
+2. **Can't connect to WiFi**
+   - Verify password in hostapd.conf
+   - Check system logs: `journalctl -u hostapd`
+
+3. **No internet access**
+   - Check VPN connection: `systemctl status openvpn@client`
+   - Verify IP forwarding: `cat /proc/sys/net/ipv4/ip_forward`
+   - Check iptables rules
+   - Verify DNS resolution: `cat /etc/resolv.conf`
+
+## Security Considerations
+
+- Change the default WiFi password in `hostapd.conf`
+- Keep your VPN credentials secure
+- Regularly update your system: `sudo apt update && sudo apt upgrade`
+- Monitor system logs for unusual activity
+
+## Customization
+
+### Changing WiFi Settings
+Edit `/etc/hostapd/hostapd.conf` to modify:
+- SSID (network name)
+- Password
+- Channel
+- WiFi mode (a/b/g/n)
+
+### Modifying Network Range
+Edit `/etc/dnsmasq.conf` to change:
+- DHCP range
+- Lease time
+- DNS settings
+
+## Contributing
+
+Feel free to submit issues and pull requests to improve this project.
+
+## License
+
+This project is released under the MIT License. See the LICENSE file for details.
