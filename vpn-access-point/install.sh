@@ -8,7 +8,10 @@ fi
 
 # Install required packages
 apt-get update
-apt-get install -y hostapd dnsmasq openvpn iptables-persistent
+apt-get install -y hostapd dnsmasq openvpn iptables-persistent python3-pip python3-flask
+
+# Add these lines after the existing package installation
+pip3 install flask flask-login werkzeug requests psutil
 
 # Copy configuration files
 cp config/hostapd/hostapd.conf /etc/hostapd/
@@ -32,6 +35,12 @@ echo 'DAEMON_CONF="/etc/hostapd/hostapd.conf"' >> /etc/default/hostapd
 
 # Save iptables rules
 netfilter-persistent save
+
+mkdir -p /usr/local/vpn-access-point
+cp -r portal /usr/local/vpn-access-point/
+cp systemd/portal.service /etc/systemd/system/
+systemctl enable portal
+systemctl start portal
 
 echo "Installation complete!"
 echo "Please:"

@@ -1,0 +1,12 @@
+[Unit]
+Description=VPN Access Point Web Portal
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/vpn-access-point/portal/app.py
+WorkingDirectory=/usr/local/vpn-access-point/portal
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target 

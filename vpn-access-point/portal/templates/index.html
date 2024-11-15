@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <!-- Status Cards -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">VPN Status</h5>
+                <p class="card-text">
+                    Status: <span id="vpn-status">Loading...</span>
+                </p>
+                <div class="btn-group">
+                    <button class="btn btn-success btn-sm" onclick="controlVPN('start')">Start</button>
+                    <button class="btn btn-danger btn-sm" onclick="controlVPN('stop')">Stop</button>
+                    <button class="btn btn-warning btn-sm" onclick="controlVPN('restart')">Restart</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">WiFi Status</h5>
+                <p class="card-text">
+                    Status: <span id="wifi-status">Loading...</span>
+                </p>
+                <div class="btn-group">
+                    <button class="btn btn-success btn-sm" onclick="controlWiFi('start')">Start</button>
+                    <button class="btn btn-danger btn-sm" onclick="controlWiFi('stop')">Stop</button>
+                    <button class="btn btn-warning btn-sm" onclick="controlWiFi('restart')">Restart</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">System Status</h5>
+                <p class="card-text">
+                    CPU Usage: <span id="cpu-usage">Loading...</span><br>
+                    Memory Usage: <span id="memory-usage">Loading...</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Connected Clients -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Connected Clients</h5>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Hostname</th>
+                                <th>IP Address</th>
+                                <th>MAC Address</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clients-table">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">WiFi Settings</h5>
+                <form id="wifi-settings">
+                    <div class="mb-3">
+                        <label class="form-label">SSID</label>
+                        <input type="text" class="form-control" id="wifi-ssid">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-control" id="wifi-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save WiFi Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">VPN Settings</h5>
+                <form id="vpn-settings">
+                    <div class="mb-3">
+                        <label class="form-label">OpenVPN Configuration</label>
+                        <textarea class="form-control" id="vpn-config" rows="10"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save VPN Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateStatus() {
+    fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('vpn-status').textContent = data.vpn ? 'Running' : 'Stopped';
+            document.getElementById('wifi-status').textContent = data.wifi ? 'Running' : 'Stopped';
+            document.getElementById('cpu-usage').textContent = data.cpu_usage + '%';
+            document.getElementById('memory-usage').textContent = data.memory_usage + '%';
+
+            const clientsTable = document.getElementById('clients-table');
+            clientsTable.innerHTML = '';
+            data.clients.forEach(client => {
+                clientsTable.innerHTML += `
+                    <tr>
+                        <td>${client.hostname}</td>
+                        <td>${client.ip}</td>
+                        <td>${client.mac}</td>
+                    </tr>
+                `;
+            });
+        });
+}
+
+function controlVPN(action) {
+    fetch(`/api/vpn/${action}`, { method: 'POST' })
+        .then(() => updateStatus());
+}
+
+function controlWiFi(action) {
+    fetch(`/api/wifi/${action}`, { method: 'POST' })
+        .then(() => updateStatus());
+}
+
+// Load settings
+fetch('/api/settings')
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('wifi-ssid').value = data.wifi.ssid;
+        document.getElementById('wifi-password').value = data.wifi.password;
+        document.getElementById('vpn-config').value = data.vpn.config;
+    });
+
+// Save WiFi settings
+document.getElementById('wifi-settings').addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            wifi: {
+                ssid: document.getElementById('wifi-ssid').value,
+                password: document.getElementById('wifi-password').value
+            }
+        })
+    });
+});
+
+// Save VPN settings
+document.getElementById('vpn-settings').addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            vpn: {
+                config: document.getElementById('vpn-config').value
+            }
+        })
+    });
+});
+
+// Update status every 5 seconds
+setInterval(updateStatus, 5000);
+updateStatus();
+</script>
+{% endblock %} 
