@@ -1,0 +1,13 @@
+[Unit]
+Description=VPN WiFi Access Point
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/vpn-setup.sh
+ExecStart=/usr/sbin/hostapd /etc/hostapd/hostapd.conf
+ExecStart=/usr/sbin/dnsmasq
+
+[Install]
+WantedBy=multi-user.target 
