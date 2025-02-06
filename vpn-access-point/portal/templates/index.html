@@ -41,7 +41,9 @@
                 <h5 class="card-title">System Status</h5>
                 <p class="card-text">
                     CPU Usage: <span id="cpu-usage">Loading...</span><br>
-                    Memory Usage: <span id="memory-usage">Loading...</span>
+                    Memory Usage: <span id="memory-usage">Loading...</span><br>
+                    IP: <span id="ip-address">Loading...</span>
+                    Country: <span id="country">Loading...</span>
                 </p>
             </div>
         </div>
@@ -120,6 +122,8 @@ function updateStatus() {
             document.getElementById('wifi-status').textContent = data.wifi ? 'Running' : 'Stopped';
             document.getElementById('cpu-usage').textContent = data.cpu_usage + '%';
             document.getElementById('memory-usage').textContent = data.memory_usage + '%';
+            document.getElementById('ip-address').textContent = data.inet.ip;
+            document.getElementById('country').textContent = data.inet.country;
 
             const clientsTable = document.getElementById('clients-table');
             clientsTable.innerHTML = '';

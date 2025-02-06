@@ -52,11 +52,13 @@ def logout():
 @app.route('/api/status')
 @login_required
 def get_status():
-    vpn_status = subprocess.run(['systemctl', 'is-active', 'openvpn@client'], 
+    vpn_status = subprocess.run(['systemctl', 'is-active', 'openvpn'], 
                               capture_output=True, text=True).stdout.strip()
     hostapd_status = subprocess.run(['systemctl', 'is-active', 'hostapd'], 
                                   capture_output=True, text=True).stdout.strip()
-    
+
+    inet_status = json.loads(subprocess.run(['curl', 'ipinfo.io'], capture_output=True, text=True).stdout.strip())
+
     # Get connected clients
     clients = []
     try:
@@ -76,18 +78,19 @@ def get_status():
         'wifi': hostapd_status == 'active',
         'clients': clients,
         'cpu_usage': psutil.cpu_percent(),
-        'memory_usage': psutil.virtual_memory().percent
+        'memory_usage': psutil.virtual_memory().percent,
+        "inet": inet_status
     })
 
 @app.route('/api/vpn/<action>', methods=['POST'])
 @login_required
 def vpn_control(action):
     if action == 'start':
-        subprocess.run(['systemctl', 'start', 'openvpn@client'])
+        subprocess.run(['systemctl', 'start', 'openvpn-client@client.service'])
     elif action == 'stop':
-        subprocess.run(['systemctl', 'stop', 'openvpn@client'])
+        subprocess.run(['systemctl', 'stop', 'openvpn-client@client.service'])
     elif action == 'restart':
-        subprocess.run(['systemctl', 'restart', 'openvpn@client'])
+        subprocess.run(['systemctl', 'restart', 'openvpn-client@client.service'])
     return jsonify({'status': 'success'})
 
 @app.route('/api/wifi/<action>', methods=['POST'])
@@ -121,7 +124,7 @@ def settings():
         
         # Update OpenVPN configuration
         if 'vpn' in data:
-            with open('/etc/openvpn/client.conf', 'w') as f:
+            with open('/etc/openvpn/client/client.conf', 'w') as f:
                 f.write(data['vpn']['config'])
         
         return jsonify({'status': 'success'})
@@ -130,7 +133,7 @@ def settings():
     with open('/etc/hostapd/hostapd.conf', 'r') as f:
         hostapd_config = f.read()
     
-    with open('/etc/openvpn/client.conf', 'r') as f:
+    with open('/etc/openvpn/client/client.conf', 'r') as f:
         vpn_config = f.read()
     
     return jsonify({
