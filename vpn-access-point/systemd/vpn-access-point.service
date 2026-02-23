@@ -5,9 +5,7 @@ After=network.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/home/pi/go.sh
-ExecStart=/usr/sbin/hostapd /etc/hostapd/hostapd.conf
-ExecStart=/usr/sbin/dnsmasq
+ExecStart=/usr/local/bin/vpn-setup.sh
 
 [Install]
 WantedBy=multi-user.target 

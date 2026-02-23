@@ -3,6 +3,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 import subprocess
 import os
 import json
+import re
 import psutil
 import time
 
@@ -52,12 +53,24 @@ def logout():
 @app.route('/api/status')
 @login_required
 def get_status():
-    vpn_status = subprocess.run(['systemctl', 'is-active', 'openvpn'], 
+    vpn_status = subprocess.run(['systemctl', 'is-active', 'openvpn@client'], 
                               capture_output=True, text=True).stdout.strip()
     hostapd_status = subprocess.run(['systemctl', 'is-active', 'hostapd'], 
                                   capture_output=True, text=True).stdout.strip()
 
-    inet_status = json.loads(subprocess.run(['curl', 'ipinfo.io'], capture_output=True, text=True).stdout.strip())
+    try:
+        result = subprocess.run(
+            ['curl', '--max-time', '10', 'ipinfo.io'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            inet_status = json.loads(result.stdout.strip())
+        else:
+            inet_status = {'ip': 'N/A', 'country': 'N/A'}
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, ValueError, Exception):
+        inet_status = {'ip': 'N/A', 'country': 'N/A'}
 
     # Get connected clients
     clients = []
@@ -86,11 +99,11 @@ def get_status():
 @login_required
 def vpn_control(action):
     if action == 'start':
-        subprocess.run(['systemctl', 'start', 'openvpn-client@client.service'])
+        subprocess.run(['systemctl', 'start', 'openvpn@client'])
     elif action == 'stop':
-        subprocess.run(['systemctl', 'stop', 'openvpn-client@client.service'])
+        subprocess.run(['systemctl', 'stop', 'openvpn@client'])
     elif action == 'restart':
-        subprocess.run(['systemctl', 'restart', 'openvpn-client@client.service'])
+        subprocess.run(['systemctl', 'restart', 'openvpn@client'])
     return jsonify({'status': 'success'})
 
 @app.route('/api/wifi/<action>', methods=['POST'])
@@ -115,16 +128,15 @@ def settings():
             with open('/etc/hostapd/hostapd.conf', 'r') as f:
                 config = f.read()
             
-            config = config.replace(f'ssid=.*', f'ssid={data["wifi"]["ssid"]}')
-            config = config.replace(f'wpa_passphrase=.*', 
-                                 f'wpa_passphrase={data["wifi"]["password"]}')
+            config = re.sub(r'^ssid=.*', 'ssid=' + re.escape(data['wifi']['ssid']), config, flags=re.MULTILINE)
+            config = re.sub(r'^wpa_passphrase=.*', 'wpa_passphrase=' + re.escape(data['wifi']['password']), config, flags=re.MULTILINE)
             
             with open('/etc/hostapd/hostapd.conf', 'w') as f:
                 f.write(config)
         
         # Update OpenVPN configuration
         if 'vpn' in data:
-            with open('/etc/openvpn/client/client.conf', 'w') as f:
+            with open('/etc/openvpn/client.conf', 'w') as f:
                 f.write(data['vpn']['config'])
         
         return jsonify({'status': 'success'})
@@ -133,7 +145,7 @@ def settings():
     with open('/etc/hostapd/hostapd.conf', 'r') as f:
         hostapd_config = f.read()
     
-    with open('/etc/openvpn/client/client.conf', 'r') as f:
+    with open('/etc/openvpn/client.conf', 'r') as f:
         vpn_config = f.read()
     
     return jsonify({
